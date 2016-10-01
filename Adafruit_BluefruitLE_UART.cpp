@@ -41,7 +41,7 @@
 */
 /******************************************************************************/
 Adafruit_BluefruitLE_UART::Adafruit_BluefruitLE_UART(HardwareSerial &port, int8_t mode_pin, int8_t cts_pin, int8_t rts_pin) :
-  _cts_pin(cts_pin), _rts_pin(rts_pin), _mode_pin(mode_pin)
+  _mode_pin(mode_pin), _cts_pin(cts_pin), _rts_pin(rts_pin)
 {
   _physical_transport = BLUEFRUIT_TRANSPORT_HWUART;
 
@@ -61,7 +61,7 @@ Adafruit_BluefruitLE_UART::Adafruit_BluefruitLE_UART(HardwareSerial &port, int8_
 */
 /******************************************************************************/
 Adafruit_BluefruitLE_UART::Adafruit_BluefruitLE_UART(SoftwareSerial &port, int8_t mode_pin, int8_t cts_pin, int8_t rts_pin) :
-  _cts_pin(cts_pin), _rts_pin(rts_pin), _mode_pin(mode_pin)
+  _mode_pin(mode_pin), _cts_pin(cts_pin), _rts_pin(rts_pin)
 {
   _physical_transport = BLUEFRUIT_TRANSPORT_SWUART;
 
@@ -110,7 +110,7 @@ bool Adafruit_BluefruitLE_UART::begin(boolean debug)
   if (hs) {
     hs->begin(9600);
 
-    #ifdef ARDUINO_STM32F2_FEATHER
+    #ifdef ARDUINO_STM32_FEATHER
     hs->enableFlowControl();
     #endif
   } else {
@@ -175,7 +175,7 @@ bool Adafruit_BluefruitLE_UART::setMode(uint8_t new_mode)
     // Switch mode using +++ command, at worst switch 2 times
     int32_t updated_mode;
 
-    isOK = sendCommandWithIntReply(F("+++"), &updated_mode);
+    isOK = atcommandIntReply(F("+++"), &updated_mode);
 
     if ( isOK )
     {
@@ -183,7 +183,7 @@ bool Adafruit_BluefruitLE_UART::setMode(uint8_t new_mode)
       // Switch again. This is required to make sure it is always correct
       if ( updated_mode != new_mode )
       {
-        isOK = sendCommandWithIntReply(F("+++"), &updated_mode);
+        isOK = atcommandIntReply(F("+++"), &updated_mode);
         // Still does not match -> give up
         if ( updated_mode != new_mode ) return false;
       }

@@ -1,13 +1,13 @@
 /**************************************************************************/
 /*!
-    @file     Adafruit_BluefruitLE_UART.h
+    @file     Adafruit_BLEEddystone.h
     @author   hathach
 
     @section LICENSE
 
     Software License Agreement (BSD License)
 
-    Copyright (c) 2015, Adafruit Industries (adafruit.com)
+    Copyright (c) 2016, Adafruit Industries (adafruit.com)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,65 +34,32 @@
 */
 /**************************************************************************/
 
-#ifndef _ADAFRUIT_BLE_UART_H_
-#define _ADAFRUIT_BLE_UART_H_
+#ifndef _ADAFRUIT_BLEEDDYSTONE_H_
+#define _ADAFRUIT_BLEEDDYSTONE_H_
 
-#include "Arduino.h"
-#include <Adafruit_BLE.h>
+#include <Arduino.h>
+#include "Adafruit_BLE.h"
 
-#define SOFTWARE_SERIAL_AVAILABLE   ( ! (defined (_VARIANT_ARDUINO_DUE_X_) || defined (_VARIANT_ARDUINO_ZERO_) || defined (ARDUINO_STM32_FEATHER)) )
+#define EDDYSTONE_DEFAULT_RSSI0M              (-18)
 
-#if SOFTWARE_SERIAL_AVAILABLE
-  #include <SoftwareSerial.h>
-#endif
-
-class Adafruit_BluefruitLE_UART : public Adafruit_BLE
+class Adafruit_BLEEddystone
 {
-  private:
-    // Hardware Pins
-    int8_t  _mode_pin, _cts_pin, _rts_pin;
-    Stream *mySerial;
-#if SOFTWARE_SERIAL_AVAILABLE
-    SoftwareSerial *ss;
-#endif
-    HardwareSerial *hs;
-    boolean _debug;
-    uint8_t _intercharwritedelay;
+private:
+  Adafruit_BLE& _ble;
 
-  public:
-    // Software Serial Constructor (0, 1, 2, or 3 pins)
-    Adafruit_BluefruitLE_UART(HardwareSerial &port,
-		      int8_t mode_pin = -1, 
-		      int8_t cts_pin = -1, 
-		      int8_t rts_pin = -1);
-#if SOFTWARE_SERIAL_AVAILABLE
-    Adafruit_BluefruitLE_UART(SoftwareSerial &port,
-		      int8_t mode_pin = -1, 
-		      int8_t cts_pin = -1, 
-		      int8_t rts_pin = -1);
-#endif
+public:
+  Adafruit_BLEEddystone(Adafruit_BLE& ble);
 
-    void setInterCharWriteDelay(uint8_t x) { _intercharwritedelay = x; };
+  bool begin(bool reset = true);
+  bool stop (bool reset = true);
 
-    virtual ~Adafruit_BluefruitLE_UART();
+  bool setURL(const char* url, bool broadcastEvenConnect = false, int8_t rssi_at_0m = EDDYSTONE_DEFAULT_RSSI0M);
 
-    // HW initialisation
-    bool begin(boolean debug = false);
-    void end(void);
+  bool startBroadcast(void);
+  bool stopBroadcast(void);
 
-    bool setMode(uint8_t new_mode);
+  bool startConfigMode(uint32_t seconds);
 
-    // Class Print virtual function Interface
-    virtual size_t write(uint8_t c);
-
-    // pull in write(str) and write(buf, size) from Print
-    using Print::write;
-
-    // Class Stream interface
-    virtual int  available(void);
-    virtual int  read(void);
-    virtual void flush(void);
-    virtual int  peek(void);
 };
 
-#endif
+#endif /* _ADAFRUIT_BLEEDDYSTONE_H_ */

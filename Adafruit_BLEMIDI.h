@@ -1,13 +1,13 @@
 /**************************************************************************/
 /*!
-    @file     Adafruit_BluefruitLE_UART.h
+    @file     Adafruit_BLEMIDI.h
     @author   hathach
 
     @section LICENSE
 
     Software License Agreement (BSD License)
 
-    Copyright (c) 2015, Adafruit Industries (adafruit.com)
+    Copyright (c) 2016, Adafruit Industries (adafruit.com)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,65 +34,72 @@
 */
 /**************************************************************************/
 
-#ifndef _ADAFRUIT_BLE_UART_H_
-#define _ADAFRUIT_BLE_UART_H_
+#ifndef _ADAFRUIT_BLEMIDI_H_
+#define _ADAFRUIT_BLEMIDI_H_
 
-#include "Arduino.h"
-#include <Adafruit_BLE.h>
+#include <Arduino.h>
+#include "Adafruit_BLE.h"
 
-#define SOFTWARE_SERIAL_AVAILABLE   ( ! (defined (_VARIANT_ARDUINO_DUE_X_) || defined (_VARIANT_ARDUINO_ZERO_) || defined (ARDUINO_STM32_FEATHER)) )
-
-#if SOFTWARE_SERIAL_AVAILABLE
-  #include <SoftwareSerial.h>
-#endif
-
-class Adafruit_BluefruitLE_UART : public Adafruit_BLE
+typedef struct ATTR_PACKED
 {
-  private:
-    // Hardware Pins
-    int8_t  _mode_pin, _cts_pin, _rts_pin;
-    Stream *mySerial;
-#if SOFTWARE_SERIAL_AVAILABLE
-    SoftwareSerial *ss;
-#endif
-    HardwareSerial *hs;
-    boolean _debug;
-    uint8_t _intercharwritedelay;
+  union {
+    struct {
+      uint8_t timestamp_hi : 6;
+      uint8_t reserved     : 1;
+      uint8_t start_bit    : 1;
+    };
 
-  public:
-    // Software Serial Constructor (0, 1, 2, or 3 pins)
-    Adafruit_BluefruitLE_UART(HardwareSerial &port,
-		      int8_t mode_pin = -1, 
-		      int8_t cts_pin = -1, 
-		      int8_t rts_pin = -1);
-#if SOFTWARE_SERIAL_AVAILABLE
-    Adafruit_BluefruitLE_UART(SoftwareSerial &port,
-		      int8_t mode_pin = -1, 
-		      int8_t cts_pin = -1, 
-		      int8_t rts_pin = -1);
-#endif
+    uint8_t byte;
+  };
+} midi_header_t;
 
-    void setInterCharWriteDelay(uint8_t x) { _intercharwritedelay = x; };
+ASSERT_STATIC_ ( sizeof(midi_header_t) == 1 );
 
-    virtual ~Adafruit_BluefruitLE_UART();
+typedef struct ATTR_PACKED
+{
+  union {
+    struct {
+      uint8_t timestamp_low : 7;
+      uint8_t start_bit : 1;
+    };
 
-    // HW initialisation
-    bool begin(boolean debug = false);
-    void end(void);
+    uint8_t byte;
+  };
+} midi_timestamp_t;
 
-    bool setMode(uint8_t new_mode);
+ASSERT_STATIC_ ( sizeof(midi_timestamp_t) == 1 );
 
-    // Class Print virtual function Interface
-    virtual size_t write(uint8_t c);
+class Adafruit_BLEMIDI
+{
+private:
+  Adafruit_BLE& _ble;
 
-    // pull in write(str) and write(buf, size) from Print
-    using Print::write;
+public:
+  typedef Adafruit_BLE::midiRxCallback_t midiRxCallback_t;
+  Adafruit_BLEMIDI(Adafruit_BLE& ble);
 
-    // Class Stream interface
-    virtual int  available(void);
-    virtual int  read(void);
-    virtual void flush(void);
-    virtual int  peek(void);
+  bool begin(bool reset = true);
+  bool stop (bool reset = true);
+
+  bool send(const uint8_t bytes[3]);
+
+  bool send(uint8_t status, const uint8_t bytes[2])
+  {
+    uint8_t buffer[3] = { status, bytes[0], bytes[1] };
+    return send(buffer);
+  }
+
+  bool send(uint8_t status, uint8_t byte1, uint8_t byte2)
+  {
+    uint8_t buffer[3] = { status, byte1, byte2 };
+    return send(buffer);
+  }
+
+  bool send_n(uint8_t status, const uint8_t bytes[], uint8_t count);
+
+  void setRxCallback(midiRxCallback_t fp);
+
+  static void processRxCallback(uint8_t data[], uint16_t len, Adafruit_BLE::midiRxCallback_t callback_func);
 };
 
-#endif
+#endif /* _ADAFRUIT_BLEMIDI_H_ */

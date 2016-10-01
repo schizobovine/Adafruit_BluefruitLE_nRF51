@@ -1,13 +1,13 @@
 /**************************************************************************/
 /*!
-    @file     Adafruit_BluefruitLE_UART.h
+    @file     common_header.h
     @author   hathach
 
     @section LICENSE
 
     Software License Agreement (BSD License)
 
-    Copyright (c) 2015, Adafruit Industries (adafruit.com)
+    Copyright (c) 2016, Adafruit Industries (adafruit.com)
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,65 +34,46 @@
 */
 /**************************************************************************/
 
-#ifndef _ADAFRUIT_BLE_UART_H_
-#define _ADAFRUIT_BLE_UART_H_
+#ifndef _COMMON_HEADER_H_
+#define _COMMON_HEADER_H_
 
-#include "Arduino.h"
-#include <Adafruit_BLE.h>
+#include <stdint.h>
+#include <stdbool.h>
 
-#define SOFTWARE_SERIAL_AVAILABLE   ( ! (defined (_VARIANT_ARDUINO_DUE_X_) || defined (_VARIANT_ARDUINO_ZERO_) || defined (ARDUINO_STM32_FEATHER)) )
+//--------------------------------------------------------------------+
+// COMPILER
+//--------------------------------------------------------------------+
+#define STRING_(x)                  #x                   // stringify without expand
+#define XSTRING_(x)                 STRING_(x)           // expand then stringify
+#define STRING_CONCAT_(a, b)        a##b                 // concat without expand
+#define XSTRING_CONCAT_(a, b)       STRING_CONCAT_(a, b) // expand then concat
 
-#if SOFTWARE_SERIAL_AVAILABLE
-  #include <SoftwareSerial.h>
+#define ATTR_PACKED               __attribute__ ((packed))
+
+//--------------------------------------------------------------------+
+// ASSERT & VERIFY
+//--------------------------------------------------------------------+
+//#define ASSERT(condition, err)    if ( !(condition) ) return err;
+
+//------------- Compile-time Assert -------------//
+#if defined __COUNTER__ && __COUNTER__ != __COUNTER__
+  #define _ASSERT_COUNTER __COUNTER__
+#else
+  #define _ASSERT_COUNTER __LINE__
 #endif
 
-class Adafruit_BluefruitLE_UART : public Adafruit_BLE
+#define ASSERT_STATIC_(const_expr) enum { XSTRING_CONCAT_(static_assert_, _ASSERT_COUNTER) = 1/(!!(const_expr)) }
+
+
+#define VERIFY_(condition)                if ( !(condition) ) return false;
+#define VERIFY_RETURN_(condition, error)  if ( !(condition) ) return error;
+
+//--------------------------------------------------------------------+
+// INLINE FUNCTION
+//--------------------------------------------------------------------+
+static inline bool is_within(uint32_t lower, uint32_t value, uint32_t upper)
 {
-  private:
-    // Hardware Pins
-    int8_t  _mode_pin, _cts_pin, _rts_pin;
-    Stream *mySerial;
-#if SOFTWARE_SERIAL_AVAILABLE
-    SoftwareSerial *ss;
-#endif
-    HardwareSerial *hs;
-    boolean _debug;
-    uint8_t _intercharwritedelay;
+  return (lower <= value) && (value <= upper);
+}
 
-  public:
-    // Software Serial Constructor (0, 1, 2, or 3 pins)
-    Adafruit_BluefruitLE_UART(HardwareSerial &port,
-		      int8_t mode_pin = -1, 
-		      int8_t cts_pin = -1, 
-		      int8_t rts_pin = -1);
-#if SOFTWARE_SERIAL_AVAILABLE
-    Adafruit_BluefruitLE_UART(SoftwareSerial &port,
-		      int8_t mode_pin = -1, 
-		      int8_t cts_pin = -1, 
-		      int8_t rts_pin = -1);
-#endif
-
-    void setInterCharWriteDelay(uint8_t x) { _intercharwritedelay = x; };
-
-    virtual ~Adafruit_BluefruitLE_UART();
-
-    // HW initialisation
-    bool begin(boolean debug = false);
-    void end(void);
-
-    bool setMode(uint8_t new_mode);
-
-    // Class Print virtual function Interface
-    virtual size_t write(uint8_t c);
-
-    // pull in write(str) and write(buf, size) from Print
-    using Print::write;
-
-    // Class Stream interface
-    virtual int  available(void);
-    virtual int  read(void);
-    virtual void flush(void);
-    virtual int  peek(void);
-};
-
-#endif
+#endif /* _COMMON_HEADER_H_ */

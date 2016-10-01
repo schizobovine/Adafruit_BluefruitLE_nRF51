@@ -39,24 +39,23 @@
 
 #include <stdint.h>
 #include <Arduino.h>
-#include "utility/sdep.h"
+#include "utility/common_header.h"
 #include "utility/errors.h"
 #include "utility/TimeoutTimer.h"
+#include "Adafruit_ATParser.h"
 
-#if defined(ARDUINO_SAMD_ZERO) && defined(SERIAL_PORT_USBVIRTUAL) 
-#define SerialDebug SERIAL_PORT_USBVIRTUAL
-#else
-#define SerialDebug Serial
-#endif
-
-#define BLUEFRUIT_MODE_COMMAND   HIGH
-#define BLUEFRUIT_MODE_DATA      LOW
 #define BLE_DEFAULT_TIMEOUT      250
-#define BLE_BUFSIZE              4*SDEP_MAX_PACKETSIZE
 
-//#define ASSERT(condition, err)    if ( !(condition) ) return err;
+enum BLEDataType_t
+{
+  BLE_DATATYPE_AUTO = 0,
+  BLE_DATATYPE_STRING,
+  BLE_DATATYPE_BYTEARRAY,
+  BLE_DATATYPE_INTEGER,
+};
 
-class Adafruit_BLE : public Stream
+
+class Adafruit_BLE : public Adafruit_ATParser
 {
   protected:
     enum
@@ -68,18 +67,16 @@ class Adafruit_BLE : public Stream
       BLUEFRUIT_TRANSPORT_SWSPI,
     };
 
-    bool     _verbose;
-    uint8_t  _mode;
-    uint16_t _timeout;
+
+//    uint8_t  _mode;
+//    uint16_t _timeout;
     uint8_t  _physical_transport;
 
   public:
+    typedef void (*midiRxCallback_t) (uint16_t timestamp, uint8_t status, uint8_t byte1, uint8_t byte2);
+
     // Constructor
     Adafruit_BLE(void);
-    char buffer[BLE_BUFSIZE+1];
-
-    // Auto print out TX & RX data to normal Serial
-    void verbose(bool enable) { _verbose = enable; }
 
     // Physical transportation checking
     bool isTransportHwUart (void) { return _physical_transport == BLUEFRUIT_TRANSPORT_HWUART; }
@@ -95,45 +92,52 @@ class Adafruit_BLE : public Stream
     bool factoryReset(void);
     void info(void);
     bool echo(bool enable);
-    bool waitForOK(void);
+
     bool isConnected(void);
-    bool isVersionAtLeast(char * versionString);
+    bool isVersionAtLeast(const char * versionString);
     void disconnect(void);
 
-    virtual bool setMode(uint8_t mode) = 0;
+    bool setAdvData(uint8_t advdata[], uint8_t size);
 
-    bool sendCommandCheckOK(const __FlashStringHelper *cmd);
-    bool sendCommandCheckOK(const char cmd[]);
+    bool writeNVM(uint16_t offset, uint8_t const  data[], uint16_t size);
+    bool writeNVM(uint16_t offset, char    const* str);
+    bool writeNVM(uint16_t offset, int32_t number);
 
-    bool sendCommandWithIntReply(const __FlashStringHelper *cmd, int32_t *reply);
-    bool sendCommandWithIntReply(const char cmd[], int32_t *reply);
+    bool readNVM(uint16_t offset, uint8_t data[], uint16_t size);
+    bool readNVM(uint16_t offset, char  * str   , uint16_t size);
+    bool readNVM(uint16_t offset, int32_t* number);
 
-    // Read one line of response into internal buffer
-    uint16_t readline(uint16_t timeout, boolean multiline = false);
-    uint16_t readline(void)
-    {
-      return readline(_timeout, false);
-    }
 
-    // Read one line of response into provided buffer
-    uint16_t readline(char    * buf, uint16_t bufsize);
-    uint16_t readline(uint8_t * buf, uint16_t bufsize)
-    {
-      return readline( (char*) buf, bufsize);
-    }
+    // No parameters
+    bool sendCommandCheckOK(const __FlashStringHelper *cmd) { return this->atcommand(cmd); }
+    bool sendCommandCheckOK(const char cmd[])               { return this->atcommand(cmd); }
 
-    // read one line and convert the string to integer number
-    int32_t readline_parseInt(void);
+    bool sendCommandWithIntReply(const __FlashStringHelper *cmd, int32_t *reply) { return this->atcommandIntReply(cmd, reply); }
+    bool sendCommandWithIntReply(const char cmd[]              , int32_t *reply) { return this->atcommandIntReply(cmd, reply); }
+
+    /////////////////////
+    // callback functions
+    /////////////////////
+    void update(uint32_t period_ms = 200);
+
+    void setDisconnectCallback( void (*fp) (void) );
+    void setConnectCallback   ( void (*fp) (void) );
+
+    void setBleUartRxCallback( void (*fp) (char data[], uint16_t len) );
+    void setBleMidiRxCallback( midiRxCallback_t fp );
+    void setBleGattRxCallback( int32_t chars_idx, void (*fp) (int32_t, uint8_t[], uint16_t) );
+
+  protected:
+    // helper
+    void install_callback(bool enable, int8_t system_id, int8_t gatts_id);
+
+    void (*_disconnect_callback) (void);
+    void (*_connect_callback) (void);
+
+    void (*_ble_uart_rx_callback) (char data[], uint16_t len);
+    midiRxCallback_t _ble_midi_rx_callback;
+
+    void (*_ble_gatt_rx_callback) (int32_t chars_id, uint8_t data[], uint16_t len);
 };
 
-//struct GattServer_t
-//{
-//  bool clear(void)
-//  {
-//    ASSERT( sendATCommand("AT+GATTCLEAR"), false);
-//    ASSERT( getATResponse(), false);
-//
-//    return true;
-//  }
-//};
 #endif /* _Adafruit_BLE_H_ */

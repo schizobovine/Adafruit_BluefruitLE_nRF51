@@ -40,7 +40,7 @@
 #include "Arduino.h"
 #include <Adafruit_BLE.h>
 
-#define SOFTWARE_SERIAL_AVAILABLE   ( ! (defined (_VARIANT_ARDUINO_DUE_X_) || defined (_VARIANT_ARDUINO_ZERO_) || defined (ARDUINO_STM32_FEATHER)) )
+#define SOFTWARE_SERIAL_AVAILABLE   ( ! (defined (_VARIANT_ARDUINO_DUE_X_) || defined (ARDUINO_ARCH_SAMD) || defined (ARDUINO_STM32_FEATHER)) )
 
 #if SOFTWARE_SERIAL_AVAILABLE
   #include <SoftwareSerial.h>
@@ -77,7 +77,7 @@ class Adafruit_BluefruitLE_UART : public Adafruit_BLE
     virtual ~Adafruit_BluefruitLE_UART();
 
     // HW initialisation
-    bool begin(boolean debug = false);
+    bool begin(boolean debug = false, boolean blocking = true);
     void end(void);
 
     bool setMode(uint8_t new_mode);

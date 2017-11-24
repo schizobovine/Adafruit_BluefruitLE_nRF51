@@ -91,7 +91,7 @@ Adafruit_BluefruitLE_UART::~Adafruit_BluefruitLE_UART()
             'irqPin' is not a HW interrupt pin false will be returned.
 */
 /******************************************************************************/
-bool Adafruit_BluefruitLE_UART::begin(boolean debug)
+bool Adafruit_BluefruitLE_UART::begin(boolean debug, boolean blocking)
 {
   _verbose = debug;
   _intercharwritedelay = 0;
@@ -123,10 +123,14 @@ bool Adafruit_BluefruitLE_UART::begin(boolean debug)
     pinMode(_cts_pin, OUTPUT);
     digitalWrite(_cts_pin, HIGH);  // turn off txo
   }
+    
+  if (_rts_pin > 0) {
+    pinMode(_rts_pin, INPUT);
+  }
 
   mySerial->setTimeout(_timeout);
   // reset Bluefruit module upon connect
-  return reset();
+  return reset(blocking);
 }
 
 /******************************************************************************/
@@ -189,6 +193,8 @@ bool Adafruit_BluefruitLE_UART::setMode(uint8_t new_mode)
       }
     }
   }
+
+  _mode = new_mode;
 
   return isOK;
 }
